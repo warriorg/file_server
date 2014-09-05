@@ -9,13 +9,11 @@ import (
 	"io"
 )
 
-const JpegMaximumQuality = 100
-
 // EncodeImage encodes the image with the given format
-func EncodeImage(targetImage io.Writer, imageData image.Image, imageFormat string) error {
+func EncodeImage(targetImage io.Writer, imageData image.Image, imageFormat string, quality int) error {
 	switch imageFormat {
-	case "jpeg":
-		jpeg.Encode(targetImage, imageData, &jpeg.Options{JpegMaximumQuality})
+	case "jpeg", "jpg":
+		jpeg.Encode(targetImage, imageData, &jpeg.Options{quality})
 	case "png":
 		png.Encode(targetImage, imageData)
 	case "gif":
@@ -23,6 +21,5 @@ func EncodeImage(targetImage io.Writer, imageData image.Image, imageFormat strin
 	default:
 		return fmt.Errorf("invalid imageFormat given")
 	}
-
 	return nil
 }

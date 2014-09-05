@@ -60,7 +60,7 @@ func Save(file *FileInfo) {
 	col.Insert(file)
 }
 
-func Find(key string) FileInfo {
+func Find(key string) *FileInfo {
 	sess, err := mgo.Dial("127.0.0.1")
 	if err != nil {
 		fmt.Printf("连接数据库失败")
@@ -72,11 +72,11 @@ func Find(key string) FileInfo {
 	sess.SetSyncTimeout(0)
 
 	col := sess.DB("file").C("file")
-	file := FileInfo{}
+	file := &FileInfo{}
 	err = col.Find(bson.M{"_id": key}).One(&file)
 	if err != nil {
 		fmt.Println(err)
-		return file
+		return nil
 	}
 
 	return file

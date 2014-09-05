@@ -6,7 +6,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/nfnt/resize"
 	"image"
-	"image/jpeg"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
@@ -71,34 +70,65 @@ func Load(w http.ResponseWriter, r *http.Request) {
 	height := r.FormValue("height")
 	quality := r.FormValue("quality")
 
-	fmt.Println(width)
+	fmt.Println(key)
 
 	file := Find(key)
 
-	if file.Key == "" {
+	if file == nil {
 		fmt.Fprintln(w, "Resource is not found")
 		return
 	}
 
-	w.Header().Set("Content-Type", "image/"+strings.TrimLeft(file.Type, "."))
+	fileType := strings.ToLower(strings.TrimLeft(file.Type, "."))
+
+	w.Header().Set("Content-Type", "image/"+fileType)
 	w.Header().Set("Content-Length", strconv.Itoa(file.Size))
 	w.Header().Set("File-Name", file.Name)
 
 	if width != "" || height != "" || quality != "" {
+		if fileType == "gif" || fileType == "jpg" || fileType != "png" {
 
-		// newdx, uerr := strconv.Atoi(url[1])
+			tmpWidth, _ := strconv.Atoi(width)
+			tmpHeight, _ := strconv.Atoi(height)
+			newQuality, _ := strconv.Atoi(quality)
 
-		originalImage, _, err := image.Decode(bytes.NewReader(file.Data))
-		if err != nil {
-			fmt.Println(err)
+			newWidth := uint(tmpWidth)
+			newHeight := uint(tmpHeight)
+
+			originalImage, _, err := image.Decode(bytes.NewReader(file.Data))
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			origBounds := originalImage.Bounds()
+			origWidth := uint(origBounds.Dx())
+			origHeight := uint(origBounds.Dy())
+
+			if newWidth <= 0 {
+				newWidth = origWidth
+			}
+
+			if newHeight <= 0 {
+				newHeight = origHeight
+			}
+
+			imageFormat := fileType
+			if newQuality <= 0 || newQuality > 100 {
+				newQuality = 100
+			} else {
+				imageFormat = "jpeg"
+			}
+
+			dst := resize.Resize(uint(newWidth), uint(newHeight), originalImage, resize.Lanczos3)
+
+			fmt.Println(newWidth)
+			fmt.Println(imageFormat)
+
+			EncodeImage(w, dst, imageFormat, newQuality)
+
+		} else {
+			w.Write(file.Data)
 		}
-
-		targetWidth := 100
-		targetHeight := 100
-
-		dst := resize.Resize(uint(targetWidth), uint(targetHeight), originalImage, resize.Lanczos3)
-
-		jpeg.Encode(w, dst, &jpeg.Options{JpegMaximumQuality})
 	} else {
 		w.Write(file.Data)
 	}
