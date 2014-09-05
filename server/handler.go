@@ -1,11 +1,17 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/nfnt/resize"
+	"image"
+	"image/jpeg"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -43,11 +49,17 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 
 	ext := filepath.Ext(header.Filename)
 
-	fileInfo := FileInfo{Name: header.Filename, Type: ext, Data: data, Size: len(data), Date: time.Now()}
-	Save(fileInfo)
+	fileInfo := FileInfo{
+		Name: header.Filename,
+		Type: ext,
+		Data: data,
+		Size: len(data),
+		Date: time.Now()}
+
+	Save(&fileInfo)
 
 	fmt.Fprintf(w, "File uploaded successfully : ")
-	fmt.Fprintf(w, header.Filename)
+	fmt.Fprintf(w, fileInfo.Key)
 
 }
 
@@ -55,11 +67,39 @@ func Load(w http.ResponseWriter, r *http.Request) {
 
 	key := mux.Vars(r)["key"]
 
-	fmt.Println(key)
+	width := r.FormValue("width")
+	height := r.FormValue("height")
+	quality := r.FormValue("quality")
+
+	fmt.Println(width)
 
 	file := Find(key)
 
-	w.Header().Set("Content-Type", "image/gif")
+	if file.Key == "" {
+		fmt.Fprintln(w, "Resource is not found")
+		return
+	}
 
-	w.Write(file.Data)
+	w.Header().Set("Content-Type", "image/"+strings.TrimLeft(file.Type, "."))
+	w.Header().Set("Content-Length", strconv.Itoa(file.Size))
+	w.Header().Set("File-Name", file.Name)
+
+	if width != "" || height != "" || quality != "" {
+
+		// newdx, uerr := strconv.Atoi(url[1])
+
+		originalImage, _, err := image.Decode(bytes.NewReader(file.Data))
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		targetWidth := 100
+		targetHeight := 100
+
+		dst := resize.Resize(uint(targetWidth), uint(targetHeight), originalImage, resize.Lanczos3)
+
+		jpeg.Encode(w, dst, &jpeg.Options{JpegMaximumQuality})
+	} else {
+		w.Write(file.Data)
+	}
 }

@@ -9,7 +9,7 @@ import (
 )
 
 type FileInfo struct {
-	Key  string
+	Key  string `bson:"_id"`
 	Name string
 	Type string
 	Size int
@@ -44,13 +44,14 @@ func init() {
 	// col.Insert(doc)
 }
 
-func Save(file FileInfo) {
+func Save(file *FileInfo) {
 	sess, err := mgo.Dial("127.0.0.1")
 	if err != nil {
 		fmt.Printf("连接数据库失败")
 		os.Exit(1)
 	}
 	defer sess.Close()
+	file.Key = bson.NewObjectId().Hex()
 
 	sess.SetMode(mgo.Eventual, true)
 	sess.SetSyncTimeout(0)
@@ -72,7 +73,7 @@ func Find(key string) FileInfo {
 
 	col := sess.DB("file").C("file")
 	file := FileInfo{}
-	err = col.Find(bson.M{"_id": bson.ObjectIdHex(key)}).One(&file)
+	err = col.Find(bson.M{"_id": key}).One(&file)
 	if err != nil {
 		fmt.Println(err)
 		return file
@@ -93,5 +94,5 @@ func Delete(key string) {
 	sess.SetSyncTimeout(0)
 
 	col := sess.DB("file").C("file")
-	col.Remove(bson.M{"_id": bson.ObjectIdHex(key)})
+	col.Remove(bson.M{"_id": key})
 }
