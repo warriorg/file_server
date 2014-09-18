@@ -127,9 +127,11 @@ func Load(w http.ResponseWriter, r *http.Request) {
 			EncodeImage(w, dst, imageFormat, newQuality)
 
 		} else {
+			w.Header().Set("Content-Disposition", "attachment;filename ="+file.Name)
 			w.Write(file.Data)
 		}
 	} else {
+		w.Header().Set("Content-Disposition", "attachment;filename ="+file.Name)
 		w.Write(file.Data)
 	}
 }
